@@ -37,6 +37,8 @@ jobs:
             ${{ runner.os }}-pipenv-
 
       - name: Install dependencies
+        env:
+          CFLAGS: "-std=gnu17 -Wno-error=incompatible-pointer-types"
         run: pipenv install --dev
 
       - name: Run linting
@@ -70,6 +72,8 @@ jobs:
             ${{ runner.os }}-pipenv-
 
       - name: Install dependencies
+        env:
+          CFLAGS: "-std=gnu17 -Wno-error=incompatible-pointer-types"
         run: pipenv install --dev
 
       - name: Run tests
