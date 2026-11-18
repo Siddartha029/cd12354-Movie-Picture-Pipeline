@@ -229,6 +229,37 @@ resource "aws_eks_node_group" "main" {
 }
 
 ##################################
+# Lookup node-group security group
+# EKS managed node groups create their own SG tagged with eks:nodegroup-name
+##################################
+data "aws_security_group" "node_group_sg" {
+  tags = {
+    "eks:nodegroup-name"    = "udacity"
+    "eks:cluster-name"      = "cluster"
+  }
+  depends_on = [aws_eks_node_group.main]
+}
+
+# Open NodePort range on the node-group SG so ELB health checks reach pods
+resource "aws_vpc_security_group_ingress_rule" "node_allow_nodeports" {
+  security_group_id = data.aws_security_group.node_group_sg.id
+  description       = "Allow NodePort range from internet (for ELB health checks)"
+  from_port         = 30000
+  to_port           = 32767
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "node_allow_http" {
+  security_group_id = data.aws_security_group.node_group_sg.id
+  description       = "Allow HTTP from internet on node SG"
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+}
+
+##################################
 # Allow public HTTP to LoadBalancers
 ##################################
 resource "aws_security_group" "allow_http" {
