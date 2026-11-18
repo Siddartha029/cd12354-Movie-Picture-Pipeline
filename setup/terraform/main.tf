@@ -228,6 +228,77 @@ resource "aws_eks_node_group" "main" {
   }
 }
 
+##################################
+# Allow public HTTP to LoadBalancers
+##################################
+resource "aws_security_group" "allow_http" {
+  name        = "allow-http-to-eks"
+  description = "Allow inbound HTTP and HTTPS to EKS Load Balancers"
+  vpc_id      = aws_vpc.vpc.id
+
+  ingress {
+    description = "HTTP from internet"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "HTTPS from internet"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Backend app port"
+    from_port   = 5000
+    to_port     = 5000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    description = "Frontend app port"
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "allow-http-to-eks"
+  }
+}
+
+# Allow all traffic within node security group for LB health checks
+resource "aws_vpc_security_group_ingress_rule" "eks_allow_http" {
+  security_group_id            = aws_eks_cluster.main.vpc_config.0.cluster_security_group_id
+  description                  = "Allow HTTP from internet for LB health checks"
+  from_port                    = 80
+  to_port                      = 80
+  ip_protocol                  = "tcp"
+  cidr_ipv4                    = "0.0.0.0/0"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "eks_allow_nodeports" {
+  security_group_id            = aws_eks_cluster.main.vpc_config.0.cluster_security_group_id
+  description                  = "Allow NodePort range from internet"
+  from_port                    = 30000
+  to_port                      = 32767
+  ip_protocol                  = "tcp"
+  cidr_ipv4                    = "0.0.0.0/0"
+}
+
 // IAM Configuration
 resource "aws_iam_role" "node_group" {
   name               = "udacity-node-group"

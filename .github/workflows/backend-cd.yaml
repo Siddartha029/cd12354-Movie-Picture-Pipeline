@@ -28,14 +28,6 @@ jobs:
       - name: Install Pipenv
         run: pip install pipenv
 
-      - name: Restore Pipenv cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/share/virtualenvs
-          key: ${{ runner.os }}-pipenv-${{ hashFiles('starter/backend/Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pipenv-
-
       - name: Install dependencies
         env:
           CFLAGS: "-std=gnu17 -Wno-error=incompatible-pointer-types"
@@ -62,14 +54,6 @@ jobs:
 
       - name: Install Pipenv
         run: pip install pipenv
-
-      - name: Restore Pipenv cache
-        uses: actions/cache@v4
-        with:
-          path: ~/.local/share/virtualenvs
-          key: ${{ runner.os }}-pipenv-${{ hashFiles('starter/backend/Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pipenv-
 
       - name: Install dependencies
         env:
