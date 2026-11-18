@@ -145,4 +145,18 @@ jobs:
         run: |
           kustomize edit set image frontend=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           kustomize build | kubectl apply -f -
-          kubectl rollout status deployment/frontend -n default --timeout=180s
+          echo "=== Nodes Status ==="
+          kubectl get nodes -o wide
+          echo "=== Waiting for rollout ==="
+          if ! kubectl rollout status deployment/frontend -n default --timeout=300s; then
+            echo "=== Diagnostics: Pods ==="
+            kubectl get pods -o wide
+            echo "=== Diagnostics: Events ==="
+            kubectl get events --sort-by=.metadata.creationTimestamp
+            echo "=== Diagnostics: Describe Pods ==="
+            kubectl describe pods
+            exit 1
+          fi
+          echo "=== Deployment successful ==="
+          kubectl get pods -o wide
+          kubectl get svc -o wide
