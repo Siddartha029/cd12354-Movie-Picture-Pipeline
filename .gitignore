@@ -4,6 +4,7 @@
 *.tfstate.*
 tfplan
 *.tfplan
+*.exe
 
 # Node
 node_modules/
