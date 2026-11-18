@@ -141,6 +141,27 @@ jobs:
         run: |
           aws eks update-kubeconfig --name ${{ secrets.EKS_CLUSTER_NAME || 'cluster' }} --region ${{ secrets.AWS_REGION || 'us-east-1' }}
 
+      - name: Open NodePort range on node security groups
+        run: |
+          echo "Finding security groups on EKS nodes..."
+          NODE_SGS=$(aws ec2 describe-instances \
+            --filters \
+              "Name=tag:kubernetes.io/cluster/${{ secrets.EKS_CLUSTER_NAME || 'cluster' }},Values=owned" \
+              "Name=instance-state-name,Values=running" \
+            --query "Reservations[*].Instances[*].SecurityGroups[*].GroupId" \
+            --output text | tr '\t\n' ' ' | tr ' ' '\n' | sort -u | grep -v '^$')
+          echo "Found security groups: $NODE_SGS"
+          for SG_ID in $NODE_SGS; do
+            echo "Opening ports on SG: $SG_ID"
+            aws ec2 authorize-security-group-ingress \
+              --group-id "$SG_ID" --protocol tcp --port 30000-32767 --cidr 0.0.0.0/0 \
+              2>&1 | grep -v "already exists" || true
+            aws ec2 authorize-security-group-ingress \
+              --group-id "$SG_ID" --protocol tcp --port 80 --cidr 0.0.0.0/0 \
+              2>&1 | grep -v "already exists" || true
+          done
+          echo "Done opening security group ports."
+
       - name: Deploy Kubernetes manifests
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
