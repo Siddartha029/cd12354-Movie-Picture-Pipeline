@@ -130,6 +130,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION || 'us-east-1' }}
 
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
       - name: Set up Kustomize
         uses: imranismail/setup-kustomize@v3
 
@@ -139,10 +143,14 @@ jobs:
 
       - name: Deploy Kubernetes manifests
         env:
-          ECR_REGISTRY: ${{ needs.build.outputs.registry }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: frontend
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          if [ -z "$ECR_REGISTRY" ]; then
+            ECR_REGISTRY=$(aws ecr describe-repositories --repository-names $ECR_REPOSITORY --query "repositories[0].repositoryUri" --output text | cut -d'/' -f1)
+          fi
+          echo "Setting image to: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
           kustomize edit set image frontend=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           kustomize build | kubectl apply -f -
           echo "=== Nodes Status ==="
